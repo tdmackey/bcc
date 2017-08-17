@@ -1,3 +1,9 @@
+#lua jit not available for some architectures
+%ifarch ppc64 aarch64 ppc64le
+%{!?with_lua: %global with_lua 0}
+%else
+%{!?with_lua: %global with_lua 1}
+%endif
 %define debug_package %{nil}
 %define llvmver 3.7.1
 
@@ -15,6 +21,15 @@ Source2:       http://llvm.org/releases/%{llvmver}/cfe-%{llvmver}.src.tar.xz
 
 ExclusiveArch: x86_64 ppc64 aarch64 ppc64le
 BuildRequires: bison, cmake >= 2.8.7, flex, gcc, gcc-c++, libxml2-devel, python2-devel, elfutils-libelf-devel-static
+%if %{with_lua}
+BuildRequires: luajit luajit-devel
+%endif
+
+%if %{with_lua}
+%global lua_include `pkg-config --variable=includedir luajit`
+%global lua_libs `pkg-config --variable=libdir luajit`/lib`pkg-config --variable=libname luajit`.so
+%global lua_config -DLUAJIT_INCLUDE_DIR=%{lua_include} -DLUAJIT_LIBRARIES=%{lua_libs}
+%endif
 
 %description
 Python bindings for BPF Compiler Collection (BCC). Control a BPF program from
@@ -34,7 +49,7 @@ export PATH="%{_builddir}/usr/bin":$PATH
 pushd %{_builddir}/llvm-%{llvmver}.src
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;BPF" -DCMAKE_INSTALL_PREFIX=/usr
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;BPF" -DCMAKE_INSTALL_PREFIX=/usr %{?lua_config}
 make %{?_smp_mflags}
 make install DESTDIR="%{_builddir}"
 popd
@@ -53,6 +68,9 @@ make install/strip DESTDIR=%{buildroot}
 %package -n libbcc
 Summary: Shared Library for BPF Compiler Collection (BCC)
 Requires: elfutils-libelf
+%if %{with_lua}
+Requires: bcc-lua = %{version}-%{release}
+%endif
 %description -n libbcc
 Shared Library for BPF Compiler Collection (BCC)
 
@@ -67,6 +85,14 @@ Summary: Python bindings for BPF Compiler Collection (BCC)
 Requires: libbcc
 %description -n python-bcc
 Python bindings for BPF Compiler Collection (BCC)
+
+%if %{with_lua}
+%package -n bcc-lua
+Summary: Standalone tool to run BCC tracers written in Lua
+Requires: libbcc = %{version}-%{release}
+%description -n bcc-lua
+Standalone tool to run BCC tracers written in Lua
+%endif
 
 %package -n bcc-tools
 Summary: Command line tools for BPF Compiler Collection (BCC)
@@ -90,10 +116,19 @@ Command line tools for BPF Compiler Collection (BCC)
 %exclude /usr/share/bcc/examples/*/*/*.pyc
 %exclude /usr/share/bcc/examples/*/*/*.pyo
 
+%if %{with_lua}
+%files -n bcc-lua
+/usr/bin/bcc-lua
+%endif
+
 %files -n bcc-tools
 /usr/share/bcc/tools/*
 /usr/share/bcc/man/*
 
 %changelog
+* Wed Aug 16 2017 TD Mackey <tdmackey@booleanhaiku.com> - 0.3.0-1
+- Add bcc-lua package
+- Revise spec to addres rpmlint issues
+
 * Fri Jul 03 2015 Brenden Blanco <bblanco@plumgrid.com> - 0.1.1-2
 - Initial RPM Release
