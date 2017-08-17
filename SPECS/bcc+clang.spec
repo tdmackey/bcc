@@ -1,34 +1,32 @@
 %define debug_package %{nil}
 %define llvmver 3.7.1
 
-Name:           bcc
-Version:        @REVISION@
-Release:        @GIT_REV_COUNT@
-Summary:        BPF Compiler Collection (BCC)
+Name:          bcc
+Version:       @REVISION@
+Release:       @GIT_REV_COUNT@
+Summary:       BPF Compiler Collection (BCC)
 
-Group:          Development/Languages
-License:        ASL 2.0
-URL:            https://github.com/iovisor/bcc
-Source0:        https://github.com/iovisor/bcc/archive/v%{version}.tar.gz
-Source1:        http://llvm.org/releases/%{llvmver}/llvm-%{llvmver}.src.tar.xz
-Source2:        http://llvm.org/releases/%{llvmver}/cfe-%{llvmver}.src.tar.xz
+Group:         Development/Languages
+License:       ASL 2.0
+URL:           https://github.com/iovisor/bcc
+Source0:       https://github.com/iovisor/bcc/archive/v%{version}.tar.gz
+Source1:       http://llvm.org/releases/%{llvmver}/llvm-%{llvmver}.src.tar.xz
+Source2:       http://llvm.org/releases/%{llvmver}/cfe-%{llvmver}.src.tar.xz
 
-BuildArch:      x86_64
-BuildRequires:  bison, cmake >= 2.8.7, flex, gcc, gcc-c++, libxml2-devel, python2-devel, elfutils-libelf-devel-static
+ExclusiveArch: x86_64 ppc64 aarch64 ppc64le
+BuildRequires: bison, cmake >= 2.8.7, flex, gcc, gcc-c++, libxml2-devel, python2-devel, elfutils-libelf-devel-static
 
 %description
 Python bindings for BPF Compiler Collection (BCC). Control a BPF program from
 userspace.
 
-
 %prep
-%setup -T -b 1 -n llvm-%{llvmver}.src
+%setup -q -T -b 1 -n llvm-%{llvmver}.src
 mkdir tools/clang
-tar -xvvJf %{_sourcedir}/cfe-%{llvmver}.src.tar.xz -C tools/clang --strip 1
-%setup -D -n bcc
+tar -xvvJf %{SOURCE1} -C tools/clang --strip 1
+%setup -q -D -n bcc
 
 %build
-
 export LD_LIBRARY_PATH="%{_builddir}/usr/lib64"
 export PATH="%{_builddir}/usr/bin":$PATH
 
@@ -51,9 +49,6 @@ popd
 pushd build
 make install/strip DESTDIR=%{buildroot}
 
-%changelog
-* Fri Jul 03 2015 Brenden Blanco <bblanco@plumgrid.com> - 0.1.1-2
-- Initial RPM Release
 
 %package -n libbcc
 Summary: Shared Library for BPF Compiler Collection (BCC)
@@ -98,3 +93,7 @@ Command line tools for BPF Compiler Collection (BCC)
 %files -n bcc-tools
 /usr/share/bcc/tools/*
 /usr/share/bcc/man/*
+
+%changelog
+* Fri Jul 03 2015 Brenden Blanco <bblanco@plumgrid.com> - 0.1.1-2
+- Initial RPM Release
